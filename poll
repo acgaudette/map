@@ -1,0 +1,3 @@
+#!/bin/sh
+
+dowatch ./run Makefile main.c impl.sl share.h sprite.frag demo

@@ -39,7 +39,7 @@ void main()
 		if (st.y > top) discard;
 		if (st.y < bot) discard;
 
-		rgb = mix(vec3(0, 1, 1), COL_TABLE, .3f);
+		rgb = mix(COL_HIL, COL_TABLE, .3f);
 	}
 
 	else rgb *= b;

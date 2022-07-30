@@ -200,7 +200,7 @@ static void debug_str(char *restrict format, ...)
 	struct sprite sprite;
 	while (block_draw(&sprite, &ctx, dbg_txt)) {
 		sprite.asc ^= islower(sprite.asc) ? ' ' : 0;
-		sprite.col = V3_ONE;
+		sprite.col = COL_TEXT;
 		sprite_draw_imm(sprite, dbg_txt);
 	}
 }
@@ -482,7 +482,7 @@ static void render(txt txt)
 		struct block_ctx ctx = block_prepare(
 			(struct block) {
 				.str = err_msg,
-				.scale = .01f,
+				.scale = SCALE * .75f,
 				.pos = V3_ZERO,
 				.rot = QT_ID,
 				.anch = V2_ZERO,
@@ -506,9 +506,10 @@ static void render(txt txt)
 
 	VBUF_FOREACH(nodes, node) {
 		const ff root = node_pos(node);
-		const float grow = 1 + node->size * .25f;
-		const float scale = SCALE * grow;
 		const float angle = node->seed.x * node->seed.y;
+
+		const float grow = 1 + node->size * .25f;
+		float scale = SCALE * grow;
 
 		struct block_ctx ctx = block_prepare(
 			(struct block) {
@@ -523,20 +524,24 @@ static void render(txt txt)
 			}
 		);
 
-		v3 col;
+		v3 col_fg, col_bg;
 		if (node->body == edit_buf)
-			col = (v3) { 1, 0, 0 };
-		else if (node == sel && sel_timer < 3.f)
-			col = v3_lerp((v3) { 1, 1, 0 }, V3_ONE, powf((sel_timer / 3), 2));
-		else
-			col = V3_ONE;
+			col_fg = col_bg = COL_EDIT;
+		else if (node == sel && sel_timer < 3.f) {
+			const float x = powf((sel_timer / 3), 2);
+			col_fg = v3_lerp(COL_SEL, COL_TEXT, x);
+			col_bg = v3_lerp(COL_SEL, COL_EDGE, x);
+		} else {
+			col_fg = COL_TEXT;
+			col_bg = COL_EDGE;
+		}
 
 		struct sprite sprite;
 		while (block_draw(&sprite, &ctx, dbg_txt)) {
 			const float alpha = minf(1.f, _time.el.real * 16.f);
 			const int sty = MAX(0, MIN(1, node->sty));
 
-			sprite.col = col;
+			sprite.col = col_fg;
 			sprite.asc ^= islower(sprite.asc) ? ' ' : 0;
 			sprite.vfx = (v3) { alpha, sty, 0 };
 			sprite_draw_imm(sprite, txt);
@@ -545,10 +550,13 @@ static void render(txt txt)
 		const ff ext = node_ext(node);
 		const float asp = ext.x / ext.y;
 
+		scale = SCALE * .6f;
+		const float density = .3f;
+
 		if (asp < MAX_CIRCLE_ASP && asp > 1.f / MAX_CIRCLE_ASP) {
 			const float r = node_r(node);
 			const float c = 2.f * M_PI * r;
-			const u16 n = MAX(8, c * .25f / GRID_SCALE);
+			const u16 n = MAX(8, c * density / GRID_SCALE);
 
 			for (u16 i = 0; i < n; ++i) {
 				const float a = 2.f * M_PI * i / (float)n;
@@ -556,9 +564,9 @@ static void render(txt txt)
 
 				sprite = (struct sprite) {
 					.pos = (v3) { pos.x, pos.y, 0 },
-					.col = col,
+					.col = col_bg,
 					.rot = qt_axis_angle(V3_BCK, a),
-					.scale = SCALE * .5f,
+					.scale = scale,
 					.anch = (ff) { 0, 0 },
 					.vfx = (v3) { 1, 0, 0 },
 					.asc = '-',
@@ -573,7 +581,7 @@ static void render(txt txt)
 			u16 n;
 
 			c = ext.x;
-			n = MAX(1, c * .25f / GRID_SCALE);
+			n = MAX(1, c * density / GRID_SCALE);
 			for (u16 i = 0; i < n; ++i) {
 				ff pos;
 
@@ -583,9 +591,9 @@ static void render(txt txt)
 
 				sprite = (struct sprite) {
 					.pos = (v3) { pos.x, pos.y, 0 },
-					.col = col,
+					.col = col_bg,
 					.rot = QT_ID,
-					.scale = SCALE * .5f,
+					.scale = scale,
 					.anch = (ff) { 0, 0 },
 					.vfx = (v3) { 1, 0, 0 },
 					.asc = '-',
@@ -600,9 +608,9 @@ static void render(txt txt)
 
 				sprite = (struct sprite) {
 					.pos = (v3) { pos.x, pos.y, 0 },
-					.col = col,
+					.col = col_bg,
 					.rot = QT_ID,
-					.scale = SCALE * .5f,
+					.scale = scale,
 					.anch = (ff) { 0, 0 },
 					.vfx = (v3) { 1, 0, 0 },
 					.asc = '-',
@@ -613,7 +621,7 @@ static void render(txt txt)
 			}
 
 			c = ext.y;
-			n = MAX(1, c * .25f / GRID_SCALE);
+			n = MAX(1, c * density / GRID_SCALE);
 			for (u16 i = 0; i < n; ++i) {
 				ff pos;
 
@@ -623,9 +631,9 @@ static void render(txt txt)
 
 				sprite = (struct sprite) {
 					.pos = (v3) { pos.x, pos.y, 0 },
-					.col = col,
+					.col = col_bg,
 					.rot = qt_axis_angle(V3_FWD, (M_PI * .5)),
-					.scale = SCALE * .5f,
+					.scale = scale,
 					.anch = (ff) { 0, 0 },
 					.vfx = (v3) { 1, 0, 0 },
 					.asc = '-',
@@ -640,9 +648,9 @@ static void render(txt txt)
 
 				sprite = (struct sprite) {
 					.pos = (v3) { pos.x, pos.y, 0 },
-					.col = col,
+					.col = col_bg,
 					.rot = qt_axis_angle(V3_FWD, (M_PI * .5)),
-					.scale = SCALE * .5f,
+					.scale = scale,
 					.anch = (ff) { 0, 0 },
 					.vfx = (v3) { 1, 0, 0 },
 					.asc = '-',
@@ -670,7 +678,7 @@ static void render(txt txt)
 		const float dist = magff(diff);
 
 		const u16 n = .5f * dist / GRID_SCALE;
-		const v3 col = v3_lerp(V3_ONE, COL_TABLE, .75);
+		const v3 col = v3_lerp(COL_TEXT, COL_TABLE, .8);
 
 		for (u16 i = 0 + 1; i < n - 1; ++i) {
 			const float x = (float)i / (n - 1);
@@ -683,11 +691,11 @@ static void render(txt txt)
 				.pos = (v3) { pos.x, pos.y, .5 },
 				.col = col,
 				.rot = qt_vecs_fwd(V3_FWD, v3_cross(V3_FWD, dir3)),
-				.scale = SCALE * .5f,
+				.scale = SCALE * .25f,
 				.anch = (ff) { 0, 0 },
 				.vfx = (v3) { 1, 0, 0 },
-				.asc = '+',
-				.bounds = BOUNDS_FONT,
+				.asc = 1,
+				.bounds = V4_ONE,
 			};
 
 			sprite_draw_imm(sprite, txt);

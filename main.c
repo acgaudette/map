@@ -113,7 +113,9 @@ int main(int argc, char **argv)
 	txtquad_init((struct txt_cfg) {
 		.app_name = "map",
 		.asset_path = "./assets/",
-		.mode = MODE_BORDERLESS,
+		.mode = MODE_WINDOWED,
+		.win_size = { 1024, 1024 },
+		.resizable = 1,
 		.clear_col = COL_TABLE,
 	});
 

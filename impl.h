@@ -149,6 +149,21 @@ static void edit_clear()
 	edit_n = 0;
 }
 
+static int is_err;
+static char err_msg[256];
+static void err(char *restrict format, ...)
+{
+	va_list ap;
+	va_start(ap, format);
+
+	vsnprintf(err_msg, 256, format, ap);
+
+	VBUF_CLEAR(nodes);
+	VBUF_CLEAR(edges);
+
+	is_err = 1;
+}
+
 typedef struct txt_buf* txt;
 static txt dbg_txt;
 static u32 dbg_n;
@@ -460,6 +475,32 @@ static void render(txt txt)
 	dbg_txt = txt;
 	dbg_n = 0;
 
+	if (is_err) {
+		struct block_ctx ctx = block_prepare(
+			(struct block) {
+				.str = err_msg,
+				.scale = .01f,
+				.pos = V3_ZERO,
+				.rot = QT_ID,
+				.anch = V2_ZERO,
+				.justify = JUST_CENTER,
+				.spacing = 1.f,
+				.line_height = 1.f,
+			}
+		);
+
+		struct sprite sprite;
+		while (block_draw(&sprite, &ctx, dbg_txt)) {
+			sprite.asc ^= islower(sprite.asc) ? ' ' : 0;
+			sprite.col = COL_ERR;
+			sprite_draw_imm(sprite, dbg_txt);
+		}
+
+		cam.pos = V2_ZERO;
+		cam.scale = 1.f;
+		return;
+	}
+
 	VBUF_FOREACH(nodes, node) {
 		const ff root = node_pos(node);
 
@@ -645,13 +686,17 @@ static void render(txt txt)
 	}
 }
 
-static void load(const char *path)
+static void load(const char *path, const int throw)
 {
 	uids = 0;
+	is_err = 0;
 
 	FILE *file = fopen(path, "r");
-	if (!file)
-		panic_perr(path);
+	if (!file) {
+		if (throw)
+			panic_perr(path);
+		return err("missing '%s'", path);
+	}
 
 	int hash = 0; // Zero is fine, but we could hash via the filename
 
@@ -684,7 +729,14 @@ static void load(const char *path)
 		--c;
 
 		if (k > indent) {
-			assert(k - indent == 1);
+			if (k - indent != 1) {
+				return err(
+					"<%s:%lu:%u> bad indent!",
+					path,
+					n_line, 1 + c - line
+				);
+			}
+
 			++indent;
 			VBUF_PUSH(chain);
 		} else {

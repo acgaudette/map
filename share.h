@@ -5,3 +5,4 @@
 #endif
 
 #define COL_TABLE RGB(3, 25, 39)
+#define COL_ERR RGB(240, 210, 110)

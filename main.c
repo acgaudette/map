@@ -42,7 +42,7 @@ struct txt_share txtquad_update(struct txt_frame frame, struct txt_buf *txt)
 {
 #ifdef WATCH
 	if (src_dirty())
-		load(path);
+		load(path, 0);
 #endif
 	txt->count = 0;
 	cam.asp = (float)frame.size.w / frame.size.h;
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 	init_interns();
 
 	path = *(argv + 1) ?: "map";
-	load(path);
+	load(path, 1);
 
 	dump_vmem();
 

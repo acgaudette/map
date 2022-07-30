@@ -1,5 +1,8 @@
 #version 450
 
+#include "txtquad/config.h"
+#define PIX_WIDTH_ST (1.f / CHAR_WIDTH)
+
 #define GL
 #include "share.h"
 
@@ -18,17 +21,27 @@ layout (set = 0, binding = 1) uniform sampler unf;
 
 void main()
 {
-	if (min(st.x, st.y) < 0 || max(st.x, st.y) > 1)
-		discard; // Padding
-
-	float b = texture(sampler2D(img, unf), uv).r;
-	if (0 == b)
-		discard; // Alpha
-
-	vec3 rgb = col.rgb;
-
-	if ((1.f - col.a) * (1.f - col.a) > 1.f - abs((st.y - .5f) * 2.f))
+	const float alpha = (1.f - col.a) * (1.f - col.a);
+	if (alpha > (1.f + 2.f * (BIAS + PADDING)) - abs((st.y - .5f) * 2.f))
 		discard; // Fade
 
+	float b = texture(sampler2D(img, unf), uv).r;
+	vec3 rgb = col.rgb;
+
+	if (min(st.x, st.y) < 0 || max(st.x, st.y) > 1 || b == 0) {
+		if (fx.x == 0) discard;
+
+		// Clear bonus pixel (font only)
+		if (st.x > 1.f) discard;
+
+		float top = mix(.5f, (1.f + PIX_WIDTH_ST), fx.x);
+		float bot = mix(.5f, (0.f - PIX_WIDTH_ST), fx.x);
+		if (st.y > top) discard;
+		if (st.y < bot) discard;
+
+		rgb = mix(vec3(0, 1, 1), COL_TABLE, .3f);
+	}
+
+	else rgb *= b;
 	final = vec4(rgb, 1);
 }

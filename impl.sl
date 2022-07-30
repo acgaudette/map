@@ -83,10 +83,13 @@ static void node_set_ext(node *node)
 
 static ff node_ext(const node *node)
 {
-	return (ff) {
-		.x = maxf(8.f, node->ext.x + 4.f) * GRID_SCALE * 2.f,
-		.y = maxf(6.f, node->ext.y + 4.f) * GRID_SCALE * 2.f,
+	ff result = {
+		.x = maxf(6.f, node->ext.x + 4.f),
+		.y = maxf(6.f, node->ext.y + 4.f),
 	};
+
+	const float grow = 1 + node->size * .25f;
+	return $ * result'2 * * GRID_SCALE' 2 grow
 
 }
 
@@ -503,12 +506,14 @@ static void render(txt txt)
 
 	VBUF_FOREACH(nodes, node) {
 		const ff root = node_pos(node);
-
+		const float grow = 1 + node->size * .25f;
+		const float scale = SCALE * grow;
 		const float angle = node->seed.x * node->seed.y;
+
 		struct block_ctx ctx = block_prepare(
 			(struct block) {
 				.str = *node->body ? node->body : "...",
-				.scale = SCALE,
+				.scale = scale,
 				.pos = @ root.x' root.y' 0
 				.rot = @ axis-angle fwd * angle' .05
 				.anch = @ 0 0
@@ -528,8 +533,12 @@ static void render(txt txt)
 
 		struct sprite sprite;
 		while (block_draw(&sprite, &ctx, dbg_txt)) {
+			const float alpha = minf(1.f, _time.el.real * 16.f);
+			const int sty = MAX(0, MIN(1, node->sty));
+
 			sprite.col = col;
 			sprite.asc ^= islower(sprite.asc) ? ' ' : 0;
+			sprite.vfx = (v3) { alpha, sty, 0 };
 			sprite_draw_imm(sprite, txt);
 		}
 
@@ -720,8 +729,6 @@ static void load(const char *path, const int throw)
 
 		++n_line;
 
-		sel = VBUF_PUSH(nodes);
-
 		u32 k = 0;
 		char *c = line;
 		while (*c++ == '\t')
@@ -745,11 +752,50 @@ static void load(const char *path, const int throw)
 				--indent;
 			}
 		}
+
+		int size = 0, sty = 0;
+		while (*c == '*' || *c == '>' || isspace(*c)) {
+			switch (*c) {
+			case '*':
+				++size;
+				break;
+			case '>':
+				++sty;
+				break;
+			default:
+				break;
+			}
+
+			++c;
+		}
+
+		char *prev = NULL;
+		for (char *trail = c; *trail != '\n'; ++trail) {
+			if (!(*trail == '*' || isspace(*trail)))
+				prev = NULL;
+			else if (!prev)
+				prev = trail;
+		}
+
+		if (!size)
+			prev = NULL;
+
+		u32 len = (n - 1) // Remove newline
+			- (c - line);
+		if (prev)
+			len -= (len - (prev - c));
+
+		if (!len) // Empty
+			continue;
+
+		sel = VBUF_PUSH(nodes);
 		chain[chain_n - 1] = sel;
 
 		*sel = (node) {
 			.uid = uids++,
-			.body = intern(c, (n - 1) - (c - line)), // Remove newline
+			.body = intern(c, len),
+			.size = size,
+			.sty = sty,
 			.dirty = 1,
 		};
 

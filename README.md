@@ -2,15 +2,16 @@
 
 ```
 sit
-	amet
-	elit
+	> amet
+	  elit
 dolor
-	magna suspicit
-		yes
-			maybe
-	no
+	* consectitur
+		sed
+			magna
+	do
 
-lorem
-ipsum
+tempor
 ante
+
+**lorem ipsum**
 ```

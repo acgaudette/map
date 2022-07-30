@@ -2,16 +2,16 @@
 
 ```
 sit
-	> amet
-	  elit
+	+ amet
+	- elit
 dolor
-	* consectitur
+	consectitur
 		sed
 			magna
 	do
 
 tempor
-ante
+> ante
 
 **lorem ipsum**
 ```

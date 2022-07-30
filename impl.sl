@@ -621,7 +621,7 @@ static void render(txt txt)
 			}
 
 			c = ext.y;
-			n = MAX(1, c * density / GRID_SCALE);
+			n = MAX(2, c * density / GRID_SCALE);
 			for (u16 i = 0; i < n; ++i) {
 				ff pos;
 
@@ -703,6 +703,23 @@ static void render(txt txt)
 	}
 }
 
+static int is_punct_scale(const char c)
+{
+	switch (c) {
+	case '*':
+	case '+':
+	case '-':
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+static int is_punct(const char c)
+{
+	return is_punct_scale(c) | (c == '>');
+}
+
 static void load(const char *path, const int throw)
 {
 	uids = 0;
@@ -762,10 +779,14 @@ static void load(const char *path, const int throw)
 		}
 
 		int size = 0, sty = 0;
-		while (*c == '*' || *c == '>' || isspace(*c)) {
+		while (is_punct(*c) || isspace(*c)) {
 			switch (*c) {
 			case '*':
+			case '+':
 				++size;
+				break;
+			case '-':
+				--size;
 				break;
 			case '>':
 				++sty;
@@ -779,13 +800,16 @@ static void load(const char *path, const int throw)
 
 		char *prev = NULL;
 		for (char *trail = c; *trail != '\n'; ++trail) {
-			if (!(*trail == '*' || isspace(*trail)))
+			if ('\\' == *trail)
+				*trail = '\n';
+
+			if (!(is_punct_scale(*trail) | isspace(*trail)))
 				prev = NULL;
 			else if (!prev)
 				prev = trail;
 		}
 
-		if (!size)
+		if (!size) // Ignore postfix if no prefix exists
 			prev = NULL;
 
 		u32 len = (n - 1) // Remove newline

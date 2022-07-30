@@ -356,8 +356,16 @@ static void update()
 		dirty.cam = 1;
 	asp_prev = cam.asp;
 
+	const int ctrl_c = KEY_HELD(LEFT_CONTROL)
+		&& KEY_DOWN(C);
+	const int esc = KEY_DOWN(ESCAPE);
+	const int kill = ctrl_c | esc;
+
 	switch (mode) {
 		case MODE_NAV: {
+			if (kill)
+				exit(0);
+
 			if (KEY_DOWN(ENTER)) {
 				mode = MODE_EDIT;
 				sel = VBUF_PUSH(nodes);
@@ -388,11 +396,7 @@ static void update()
 		case MODE_EDIT: {
 			edit_update();
 
-			const int ctrl_c = KEY_HELD(LEFT_CONTROL)
-				&& KEY_DOWN(C);
-			const int esc = KEY_DOWN(ESCAPE);
-
-			if (ctrl_c | esc) {
+			if (kill) {
 				sel->body = intern(edit_buf, edit_n);
 				edit_clear();
 				mode = MODE_NAV;

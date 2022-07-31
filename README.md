@@ -13,5 +13,5 @@ dolor
 tempor
 > ante
 
-**lorem ipsum**
+++ *lorem ipsum* ++
 ```

@@ -536,14 +536,19 @@ static void render(txt txt)
 			col_bg = COL_EDGE;
 		}
 
+		if (node->sty < 0) {
+			col_fg = v3_lerp(COL_TABLE, col_fg, powf(.75, -node->sty));
+			col_bg = v3_lerp(COL_TABLE, col_bg, powf(.75, -node->sty));
+		}
+
 		struct sprite sprite;
 		while (block_draw(&sprite, &ctx, dbg_txt)) {
 			const float alpha = minf(1.f, _time.el.real * 16.f);
-			const int sty = MAX(0, MIN(1, node->sty));
+			const int hi = MAX(0, MIN(1, node->sty));
 
 			sprite.col = col_fg;
 			sprite.asc ^= islower(sprite.asc) ? ' ' : 0;
-			sprite.vfx = (v3) { alpha, sty, 0 };
+			sprite.vfx = (v3) { alpha, hi, 0 };
 			sprite_draw_imm(sprite, txt);
 		}
 
@@ -703,10 +708,9 @@ static void render(txt txt)
 	}
 }
 
-static int is_punct_scale(const char c)
+static int is_punct_size(const char c)
 {
 	switch (c) {
-	case '*':
 	case '+':
 	case '-':
 		return 1;
@@ -715,9 +719,20 @@ static int is_punct_scale(const char c)
 	}
 }
 
+static int is_punct_sty(const char c)
+{
+	switch (c) {
+	case '*':
+	case '>':
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 static int is_punct(const char c)
 {
-	return is_punct_scale(c) | (c == '>');
+	return is_punct_size(c) | is_punct_sty(c);
 }
 
 static void load(const char *path, const int throw)
@@ -753,6 +768,9 @@ static void load(const char *path, const int throw)
 
 		if (*line == '\n')
 			continue;
+
+		if (!strncmp(line, "###", 3))
+			break;
 		if (*line == '#')
 			continue;
 
@@ -762,6 +780,8 @@ static void load(const char *path, const int throw)
 			++k;
 		--c;
 
+		if (!strncmp(c, "###", 3))
+			break;
 		if (*c == '#')
 			continue;
 
@@ -786,15 +806,17 @@ static void load(const char *path, const int throw)
 		int size = 0, sty = 0;
 		while (is_punct(*c) || isspace(*c)) {
 			switch (*c) {
-			case '*':
 			case '+':
 				++size;
 				break;
 			case '-':
 				--size;
 				break;
-			case '>':
+			case '*':
 				++sty;
+				break;
+			case '>':
+				--sty;
 				break;
 			default:
 				break;
@@ -808,13 +830,13 @@ static void load(const char *path, const int throw)
 			if ('\\' == *trail)
 				*trail = '\n';
 
-			if (!(is_punct_scale(*trail) | isspace(*trail)))
+			if (!(is_punct(*trail) | isspace(*trail)))
 				prev = NULL;
 			else if (!prev)
 				prev = trail;
 		}
 
-		if (!size) // Ignore postfix if no prefix exists
+		if (!size && !sty) // Ignore postfix if no prefix exists
 			prev = NULL;
 
 		u32 len = (n - 1) // Remove newline

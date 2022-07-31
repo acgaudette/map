@@ -745,14 +745,16 @@ static void load(const char *path, const int throw)
 	VBUF_PUSH(chain);
 	u32 indent = 0;
 
+	*chain = NULL;
+
 	size_t n_line = 0;
 	while (-1 != (n = getline(&line, &len, file))) {
-		if (*line == '#')
-			continue;
+		++n_line;
+
 		if (*line == '\n')
 			continue;
-
-		++n_line;
+		if (*line == '#')
+			continue;
 
 		u32 k = 0;
 		char *c = line;
@@ -760,8 +762,11 @@ static void load(const char *path, const int throw)
 			++k;
 		--c;
 
+		if (*c == '#')
+			continue;
+
 		if (k > indent) {
-			if (k - indent != 1) {
+			if (k - indent != 1 || !*chain) {
 				return err(
 					"<%s:%lu:%u> bad indent!",
 					path,

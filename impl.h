@@ -30,6 +30,7 @@ typedef struct {
 	int col;
 	ff seed;
 
+	int seeded;
 	uid parent;
 	ff ext;
 	int dirty;
@@ -97,6 +98,13 @@ static float node_r(const node *node)
 {
 	const ff r = node_ext(node);
 	return maxf(r.x, r.y) * .5f;
+}
+
+static void node_seed(node *node)
+{
+	assert(!node->seeded);
+	node->seed = (ff) { srandf(), srandf() };
+	node->seeded = 1;
 }
 
 typedef struct {
@@ -391,10 +399,10 @@ static void update()
 				*sel = (node) {
 					.uid = uids++,
 					.body = edit_buf,
-					.seed = { srandf(), srandf() },
 					.dirty = 1,
 				};
 
+				node_seed(sel);
 				find_pos(sel);
 				dirty.cam = 1;
 			}
@@ -876,8 +884,20 @@ static void load(const char *path, const int throw)
 	fclose(file);
 
 	srand(hash);
+
+	// Seed parents first
 	VBUF_FOREACH(nodes, node) {
-		node->seed = (ff) { srandf(), srandf() };
+		if (node->parent)
+			continue;
+
+		node_seed(node);
 		find_pos(node);
+	}
+
+	VBUF_FOREACH(nodes, node) {
+		if (node->parent) {
+			node_seed(node);
+			find_pos(node);
+		}
 	}
 }

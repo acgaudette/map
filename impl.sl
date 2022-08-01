@@ -103,6 +103,19 @@ static float node_r(const node *node)
 static void node_seed(node *node)
 {
 	assert(!node->seeded);
+
+	size_t seed;
+	size_t len = strlen(node->body);
+	{
+		seed = 5381;
+		for (u32 i = 0; i < len; ++i) {
+			char c = node->body[i];
+			if (isalpha(c) || isdigit(c))
+				seed += (seed << 5) + c;
+		}
+	}
+
+	srand(seed);
 	node->seed = (ff) { srandf(), srandf() };
 	node->seeded = 1;
 }
@@ -884,20 +897,8 @@ static void load(const char *path, const int throw)
 	fclose(file);
 
 	srand(hash);
-
-	// Seed parents first
 	VBUF_FOREACH(nodes, node) {
-		if (node->parent)
-			continue;
-
 		node_seed(node);
 		find_pos(node);
-	}
-
-	VBUF_FOREACH(nodes, node) {
-		if (node->parent) {
-			node_seed(node);
-			find_pos(node);
-		}
 	}
 }

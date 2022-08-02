@@ -21,7 +21,7 @@
 
 #define GRID_SCALE .0075f
 #define      SCALE .02f
-#define MAX_CIRCLE_ASP 1.5f
+#define MAX_CIRCLE_ASP 1.55f
 #define COLL_BUF 2.f
 
 static enum mode {

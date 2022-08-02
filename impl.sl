@@ -11,7 +11,15 @@
 #define DEL_REP_S .05f
 #define DEL_DEL_S .1f
 
-#define GRID_SCALE .01f
+#ifdef  EDGE_SOLID
+	#define EDGE_SCALE 0.f
+#else
+	#define EDGE_SCALE .0100f
+#endif
+
+#define EDGE_THICK .33f
+
+#define GRID_SCALE .0075f
 #define      SCALE .02f
 #define MAX_CIRCLE_ASP 1.5f
 #define COLL_BUF 2.f
@@ -90,7 +98,7 @@ static ff node_ext(const node *node)
 	};
 
 	const float grow = 1 + node->size * .25f;
-	return $ * result'2 * * GRID_SCALE' 2 grow
+	return $ * result'2 * SCALE' grow
 
 }
 
@@ -494,6 +502,19 @@ static void update_fixed()
 {
 }
 
+static void sprite_draw_edge(struct sprite sprite, struct txt_buf *txt)
+{
+	const float thick = clamp01f(EDGE_THICK);
+
+	struct txt_quad quad = sprite_conv(sprite);
+	quad.model = m4_model_aniso(
+		@ + sprite.pos app sprite.rot * [ -.5 + -.5 thick 0 ] sprite.scale
+		sprite.rot,
+		(v3) { sprite.scale, sprite.scale * thick, 1.f }
+	);
+	quad_draw_imm(quad, txt);
+}
+
 static void render(txt txt)
 {
 	dbg_txt = txt;
@@ -582,7 +603,9 @@ static void render(txt txt)
 		if (asp < MAX_CIRCLE_ASP && asp > 1.f / MAX_CIRCLE_ASP) {
 			const float r = node_r(node);
 			const float c = 2.f * M_PI * r;
-			const u16 n = MAX(8, c * density / GRID_SCALE);
+			const u16 n = (int)EDGE_SCALE ?
+				MAX(8, c * density / EDGE_SCALE) :
+				c / scale + 3;
 
 			for (u16 i = 0; i < n; ++i) {
 				const float a = 2.f * M_PI * i / (float)n;
@@ -595,11 +618,11 @@ static void render(txt txt)
 					.scale = scale,
 					.anch = @ 0 0
 					.vfx = @ 1 0 0
-					.asc = '-',
-					.bounds = BOUNDS_FONT,
+					.asc = 1,
+					.bounds = V4_ZERO,
 				};
 
-				sprite_draw_imm(sprite, txt);
+				sprite_draw_edge(sprite, txt);
 			}
 		} else {
 			const ff ext = node_ext(node);
@@ -607,7 +630,9 @@ static void render(txt txt)
 			u16 n;
 
 			c = ext.x;
-			n = MAX(1, c * density / GRID_SCALE);
+			n = (int)EDGE_SCALE ?
+				MAX(1, c * density / EDGE_SCALE) :
+				c / scale + 3;
 			for (u16 i = 0; i < n; ++i) {
 				ff pos;
 
@@ -622,11 +647,11 @@ static void render(txt txt)
 					.scale = scale,
 					.anch = @ 0 0
 					.vfx = @ 1 0 0
-					.asc = '-',
-					.bounds = BOUNDS_FONT,
+					.asc = 1,
+					.bounds = V4_ZERO,
 				};
 
-				sprite_draw_imm(sprite, txt);
+				sprite_draw_edge(sprite, txt);
 
 				pos.x = root.x + -ext.x * .5f;
 				pos.y = root.y -  ext.y * .5f;
@@ -639,15 +664,17 @@ static void render(txt txt)
 					.scale = scale,
 					.anch = @ 0 0
 					.vfx = @ 1 0 0
-					.asc = '-',
-					.bounds = BOUNDS_FONT,
+					.asc = 1,
+					.bounds = V4_ZERO,
 				};
 
-				sprite_draw_imm(sprite, txt);
+				sprite_draw_edge(sprite, txt);
 			}
 
 			c = ext.y;
-			n = MAX(2, c * density / GRID_SCALE);
+			n = (int)EDGE_SCALE ?
+				MAX(2, c * density / EDGE_SCALE) :
+				c / scale + 3;
 			for (u16 i = 0; i < n; ++i) {
 				ff pos;
 
@@ -662,11 +689,11 @@ static void render(txt txt)
 					.scale = scale,
 					.anch = @ 0 0
 					.vfx = @ 1 0 0
-					.asc = '-',
-					.bounds = BOUNDS_FONT,
+					.asc = 1,
+					.bounds = V4_ZERO,
 				};
 
-				sprite_draw_imm(sprite, txt);
+				sprite_draw_edge(sprite, txt);
 
 				pos.x = root.x + ext.x * .5f;
 				pos.y = root.y - ext.y * .5f;
@@ -679,11 +706,11 @@ static void render(txt txt)
 					.scale = scale,
 					.anch = @ 0 0
 					.vfx = @ 1 0 0
-					.asc = '-',
-					.bounds = BOUNDS_FONT,
+					.asc = 1,
+					.bounds = V4_ZERO,
 				};
 
-				sprite_draw_imm(sprite, txt);
+				sprite_draw_edge(sprite, txt);
 			}
 		}
 	}
@@ -703,7 +730,11 @@ static void render(txt txt)
 		const ff dir = $ norm diff'2
 		const float dist = $ len diff'2
 
-		const u16 n = .5f * dist / GRID_SCALE;
+		const float scale = SCALE * .25f;
+
+		u16 n = (int)EDGE_SCALE ?
+			.5f * dist / EDGE_SCALE :
+			dist / scale + 3; // 1 to round, two for the caps
 		const v3 col = $ mix'3 COL_TEXT COL_TABLE .8
 
 		for (u16 i = 0 + 1; i < n - 1; ++i) {
@@ -717,7 +748,7 @@ static void render(txt txt)
 				.pos = @ pos.x' pos.y' .5
 				.col = col,
 				.rot = @ qt/fwd fwd cross fwd dir3
-				.scale = SCALE * .25f,
+				.scale = scale,
 				.anch = @ 0 0
 				.vfx = @ 1 0 0
 				.asc = 1,

@@ -360,11 +360,11 @@ static int find_pos(node *child)
 		dir = $ * norm - node_pos(child)'2 zero 2
 	}
 
-	// Only check against previous nodes to force determinism
+	// 'Invalidate' future nodes only
 	int result = 0;
 	while (collides_prev(child)) {
-		int x = roundf(dir.x * 4.f);
-		int y = roundf(dir.y * 4.f);
+		int x = roundf(dir.x * 2.f);
+		int y = roundf(dir.y * 2.f);
 		assert(x | y);
 		child->x += x;
 		child->y += y;

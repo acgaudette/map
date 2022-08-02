@@ -360,11 +360,11 @@ static int find_pos(node *child)
 		dir = mulff(normff(subff(node_pos(child), V2_ZERO)), 2);
 	}
 
-	// Only check against previous nodes to force determinism
+	// 'Invalidate' future nodes only
 	int result = 0;
 	while (collides_prev(child)) {
-		int x = roundf(dir.x * 4.f);
-		int y = roundf(dir.y * 4.f);
+		int x = roundf(dir.x * 2.f);
+		int y = roundf(dir.y * 2.f);
 		assert(x | y);
 		child->x += x;
 		child->y += y;

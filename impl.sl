@@ -857,6 +857,9 @@ static void load(const char *path, const int throw)
 
 		int size = 0, sty = 0;
 		while (is_punct(*c) || isspace(*c)) {
+			if (*c == '\n')
+				break;
+
 			switch (*c) {
 			case '+':
 				++size;
